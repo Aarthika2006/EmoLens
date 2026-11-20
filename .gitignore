@@ -1,7 +1,6 @@
 # Capstone Gitignore
 
-# Dataset (raw zip and extracted raw images)
-dataset/
+# Raw archive files
 *.zip
 *.tar.gz
 
