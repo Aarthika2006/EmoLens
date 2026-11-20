@@ -26,6 +26,17 @@ class AppConstants {
   static const int defaultSmoothingWindow = 5;
   static const double emaAlpha = 0.3; // EMA smoothing factor
 
+  // Per-emotion confidence thresholds.
+  // Happy has a lower bar (model under-detects it on non-DS faces).
+  // Neutral is moderate. Sad is strict to avoid false distress alerts.
+  static const double happyThreshold  = 0.35;  // show Happy if EMA >= 35%
+  static const double neutralThreshold = 0.38; // show Neutral if EMA >= 38%
+  static const double sadThreshold    = 0.60;  // show Sad only if EMA >= 60%
+
+  // Sad must sustain its threshold for this many consecutive frames
+  // before the label flips to "Sad" (prevents transient false positives).
+  static const int sadSustainFrames = 12; // ~3 s at 4 fps
+
   // Reconnect
   static const int initialReconnectDelayMs = 1000;
   static const int maxReconnectDelayMs = 30000;

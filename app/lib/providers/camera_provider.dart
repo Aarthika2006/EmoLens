@@ -87,29 +87,67 @@ class EmotionNotifier extends Notifier<EmotionState> {
     'Sad': 0.0,
   };
 
+  // Consecutive frames where Sad has met its strict threshold.
+  // Sad is only announced after sadSustainFrames consecutive hits to prevent
+  // transient low-light false positives.
+  int _sadSustainCount = 0;
+
   @override
   EmotionState build() => const EmotionState();
 
   void addResult(EmotionResult result, int smoothingWindow) {
-    // EMA update: alpha from smoothing window
+    // ── 1. EMA smoothing ──────────────────────────────────────────────────
     final alpha = 2.0 / (smoothingWindow + 1);
-
     for (final label in _emaProbs.keys) {
       final prob = result.probabilities[label] ?? 0.0;
       _emaProbs[label] = alpha * prob + (1 - alpha) * _emaProbs[label]!;
     }
 
-    // Find smoothed winner
-    String smoothedLabel = 'Unknown';
-    double smoothedConf = 0.0;
-    _emaProbs.forEach((label, prob) {
-      if (prob > smoothedConf) {
-        smoothedConf = prob;
-        smoothedLabel = label;
-      }
-    });
+    final happyEma   = _emaProbs['Happy']   ?? 0.0;
+    final neutralEma = _emaProbs['Neutral'] ?? 0.0;
+    final sadEma     = _emaProbs['Sad']     ?? 0.0;
 
-    // Keep recent results for timeline (last 60 s)
+    // ── 2. Sad sustain gate ───────────────────────────────────────────────
+    // Sad only wins when it has been above its strict threshold for
+    // sadSustainFrames consecutive frames (≈ 3 s at ~4 fps).
+    if (sadEma >= AppConstants.sadThreshold) {
+      _sadSustainCount++;
+    } else {
+      _sadSustainCount = 0;
+    }
+    final sadGateOpen = _sadSustainCount >= AppConstants.sadSustainFrames;
+
+    // ── 3. Per-emotion threshold winner selection ─────────────────────────
+    //
+    // Priority order: Sad (strict + gate) → Happy (lenient) → Neutral → Unknown
+    //
+    // Why this order?
+    //   • Sad is high-stakes (caregiver alert) → needs strict gating.
+    //   • Happy is under-detected by the model on non-DS faces → lower bar.
+    //   • Neutral is the "safe" fallback when nothing is clear.
+    //   • Unknown fires when even Neutral hasn't reached its threshold.
+    String smoothedLabel;
+    double smoothedConf;
+
+    if (sadGateOpen && sadEma >= AppConstants.sadThreshold) {
+      smoothedLabel = 'Sad';
+      smoothedConf  = sadEma;
+    } else if (happyEma >= AppConstants.happyThreshold &&
+               happyEma >= neutralEma) {
+      // Happy wins when it exceeds its threshold AND leads Neutral.
+      smoothedLabel = 'Happy';
+      smoothedConf  = happyEma;
+    } else if (neutralEma >= AppConstants.neutralThreshold) {
+      smoothedLabel = 'Neutral';
+      smoothedConf  = neutralEma;
+    } else {
+      // All classes below their thresholds → too uncertain to declare.
+      smoothedLabel = 'Unknown';
+      smoothedConf  = [happyEma, neutralEma, sadEma]
+          .reduce((a, b) => a > b ? a : b);
+    }
+
+    // ── 4. Update timeline (last 60 s) ────────────────────────────────────
     final cutoff = DateTime.now().subtract(
       Duration(seconds: AppConstants.timelineWindowSeconds),
     );
@@ -128,6 +166,7 @@ class EmotionNotifier extends Notifier<EmotionState> {
 
   void reset() {
     _emaProbs = {'Happy': 0.0, 'Neutral': 0.0, 'Sad': 0.0};
+    _sadSustainCount = 0;
     state = const EmotionState();
   }
 }
@@ -146,9 +185,9 @@ final detectedFaceBoundingBoxProvider =
     StateProvider<FaceBoundingBox?>((ref) => null);
 
 final originalFrameSizeProvider =
-    StateProvider<({double width, double height})>((ref) => (width: 320, height: 240));
+    StateProvider<({double width, double height})>(
+        (ref) => (width: 320, height: 240));
 
 // --- Snapshot ---
 
 final snapshotProvider = StateProvider<Uint8List?>((ref) => null);
-
