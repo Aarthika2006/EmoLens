@@ -1,4 +1,4 @@
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// Tests for EMA (Exponential Moving Average) smoothing logic.
 /// This replicates the smoothing done in EmotionNotifier.

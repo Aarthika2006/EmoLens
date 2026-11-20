@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:emolens/data/services/camera_stream_service.dart';
 
 /// Unit tests for MJPEG stream boundary parsing.
