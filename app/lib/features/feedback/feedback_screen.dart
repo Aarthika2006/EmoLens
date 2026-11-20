@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:archive/archive.dart';
 import '../../core/theme/app_colors.dart';
 
 class FeedbackScreen extends ConsumerStatefulWidget {
@@ -69,23 +70,47 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
         );
         return;
       }
-      // Count files
+      final archive = Archive();
       int count = 0;
       await for (final entity in corrDir.list(recursive: true)) {
-        if (entity is File && entity.path.endsWith('.jpg')) count++;
+        if (entity is File && entity.path.endsWith('.jpg')) {
+          count++;
+          final bytes = await entity.readAsBytes();
+          final relativeName = entity.path.substring(corrDir.path.length + 1);
+          archive.addFile(ArchiveFile(relativeName, bytes.length, bytes));
+        }
       }
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$count correction(s) stored at ${corrDir.path}. '
-              'Copy this folder and run adaptive_personalization.py to retrain.'),
-          duration: const Duration(seconds: 6),
-        ),
-      );
+      if (count == 0) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No correction images found to export.')),
+        );
+        return;
+      }
+      final zipEncoder = ZipEncoder();
+      final zipBytes = zipEncoder.encode(archive);
+      if (zipBytes != null) {
+        Directory exportDir = Directory('/storage/emulated/0/Download');
+        if (!await exportDir.exists()) {
+          final ext = await getExternalStorageDirectory();
+          exportDir = ext ?? dir;
+        }
+        final exportFile = File('${exportDir.path}/EmoLens_Corrections.zip');
+        await exportFile.writeAsBytes(zipBytes);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$count correction(s) exported to:\n${exportFile.path}'),
+            backgroundColor: AppColors.happy,
+            duration: const Duration(seconds: 8),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
+      );
     }
   }
 

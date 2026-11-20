@@ -54,7 +54,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 warnings.filterwarnings("ignore", category=UserWarning)
 
 import cv2
-import mediapipe as mp
 from PIL import Image
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
@@ -138,39 +137,29 @@ def extract_dataset():
 # ============================================================================
 def detect_and_crop_face(image_bgr, face_detector, padding=FACE_PADDING):
     """
-    Detect face using MediaPipe and crop with padding.
-    
-    Args:
-        image_bgr: OpenCV BGR image
-        face_detector: MediaPipe FaceDetection instance
-        padding: Fraction of face size to add as padding (0.2 = 20%)
-    
-    Returns:
-        Cropped face as BGR numpy array, or None if no face found.
+    Detect face using OpenCV Haar Cascade and crop with padding.
+    Falls back to centered square crop if no face detected.
     """
     h, w = image_bgr.shape[:2]
-    image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-    results = face_detector.process(image_rgb)
+    gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
 
-    if not results.detections:
-        return None
+    faces = face_detector.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
+    if len(faces) > 0:
+        x, y, fw, fh = max(faces, key=lambda b: b[2] * b[3])
+        pad_w = int(padding * fw)
+        pad_h = int(padding * fh)
+        x_min = max(0, x - pad_w)
+        y_min = max(0, y - pad_h)
+        x_max = min(w, x + fw + pad_w)
+        y_max = min(h, y + fh + pad_h)
+        if x_max - x_min > 10 and y_max - y_min > 10:
+            return image_bgr[y_min:y_max, x_min:x_max]
 
-    # Use the detection with highest confidence
-    detection = max(results.detections, key=lambda d: d.score[0])
-    bbox = detection.location_data.relative_bounding_box
-
-    # Convert relative coords to absolute with padding
-    x_min = int(max(0, (bbox.xmin - padding * bbox.width) * w))
-    y_min = int(max(0, (bbox.ymin - padding * bbox.height) * h))
-    x_max = int(min(w, (bbox.xmin + bbox.width + padding * bbox.width) * w))
-    y_max = int(min(h, (bbox.ymin + bbox.height + padding * bbox.height) * h))
-
-    # Sanity check
-    if x_max - x_min < 10 or y_max - y_min < 10:
-        return None
-
-    face_crop = image_bgr[y_min:y_max, x_min:x_max]
-    return face_crop
+    # Fallback: square center crop (images are close-up face portraits)
+    min_dim = min(h, w)
+    start_x = (w - min_dim) // 2
+    start_y = (h - min_dim) // 2
+    return image_bgr[start_y:start_y + min_dim, start_x:start_x + min_dim]
 
 
 def preprocess_dataset(force=False):
@@ -191,14 +180,8 @@ def preprocess_dataset(force=False):
     print(f"[INFO] Preprocessing dataset → {PROCESSED_DIR}")
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Initialize MediaPipe FaceDetection
-    # model_selection=1: full-range model (better for varied distances)
-    # min_detection_confidence=0.5: moderate threshold
-    mp_face = mp.solutions.face_detection
-    face_detector = mp_face.FaceDetection(
-        model_selection=1,
-        min_detection_confidence=0.5
-    )
+    # Initialize OpenCV Haar Cascade Face Detector
+    face_detector = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
     stats = {"total": 0, "processed": 0, "no_face": 0, "corrupt": 0}
 
@@ -240,8 +223,6 @@ def preprocess_dataset(force=False):
             dst_path = dst_dir / img_path.name
             cv2.imwrite(str(dst_path), face_resized)
             stats["processed"] += 1
-
-    face_detector.close()
 
     print(f"\n[INFO] Preprocessing complete:")
     print(f"  Total images  : {stats['total']}")
