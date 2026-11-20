@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security config for EmoLens.
+  Allows cleartext HTTP traffic to local/private IP ranges
+  because the ESP32-CAM serves plain HTTP (not HTTPS).
+  NO cleartext is allowed to public internet domains.
+-->
+<network-security-config>
+    <!-- Allow cleartext for local private IP ranges (RFC 1918) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- 10.0.0.0/8 -->
+        <domain includeSubdomains="true">10.0.0.0</domain>
+        <!-- 172.16.0.0/12 -->
+        <domain includeSubdomains="true">172.16.0.0</domain>
+        <!-- 192.168.0.0/16 -->
+        <domain includeSubdomains="true">192.168.0.0</domain>
+        <!-- Localhost / hotspot common range -->
+        <domain includeSubdomains="true">localhost</domain>
+    </domain-config>
+    <!-- Block cleartext for all other destinations -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
+
