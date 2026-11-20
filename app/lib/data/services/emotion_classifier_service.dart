@@ -95,25 +95,31 @@ class EmotionClassifierService {
     // Run inference
     _interpreter!.run(inputTensor, output);
 
-    final probabilities = (output[0] as List<double>);
+    final rawOutputs = (output[0] as List<double>);
     final latency = DateTime.now().difference(startTime).inMilliseconds;
 
-    // Apply softmax if outputs aren't already probabilities
-    final softmaxProbs = _softmax(probabilities);
+    // Check if the model outputs are already softmax probabilities.
+    // In Keras, the final layer has activation="softmax", so outputs sum to ~1.0 and all are >= 0.0.
+    // Calling softmax again compresses the dynamic range into a narrow ~25%-45% band.
+    final sum = rawOutputs.reduce((a, b) => a + b);
+    final allNonNegative = rawOutputs.every((v) => v >= 0.0);
+    final isAlreadyProbabilities = (sum >= 0.95 && sum <= 1.05) && allNonNegative;
+
+    final finalProbs = isAlreadyProbabilities ? rawOutputs : _softmax(rawOutputs);
 
     // Find the class with highest confidence
     int maxIndex = 0;
-    double maxConf = softmaxProbs[0];
-    for (int i = 1; i < softmaxProbs.length; i++) {
-      if (softmaxProbs[i] > maxConf) {
-        maxConf = softmaxProbs[i];
+    double maxConf = finalProbs[0];
+    for (int i = 1; i < finalProbs.length; i++) {
+      if (finalProbs[i] > maxConf) {
+        maxConf = finalProbs[i];
         maxIndex = i;
       }
     }
 
     final Map<String, double> probMap = {};
     for (int i = 0; i < _labels.length; i++) {
-      probMap[_labels[i]] = softmaxProbs[i];
+      probMap[_labels[i]] = finalProbs[i];
     }
 
     return EmotionResult(
