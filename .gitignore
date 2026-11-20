@@ -47,6 +47,8 @@ app/android/gradlew
 app/android/gradlew.bat
 app/android/gradle/
 *.keystore
+*.apk
+*.aab
 
 # IDE / Editor
 .idea/
