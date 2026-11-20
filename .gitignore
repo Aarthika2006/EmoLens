@@ -13,13 +13,12 @@ __pycache__/
 .Python
 env/
 build/
+# Python build directories
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
