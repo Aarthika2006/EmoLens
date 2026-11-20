@@ -13,6 +13,9 @@ __pycache__/
 .Python
 env/
 build/
+ml/saved_models/
+*.keras
+*.h5
 # Python build directories
 develop-eggs/
 dist/
