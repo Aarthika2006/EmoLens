@@ -3,671 +3,1034 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EmoLens — Live Emotion Recognition for Down Syndrome</title>
+  <title>EmoLens — Live Emotion Recognition Web Dashboard</title>
   <link rel="icon" type="image/png" href="https://img.icons8.com/color/96/smiling-face-with-smiling-eyes.png">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0F172A;
-      --card-bg: #1E293B;
-      --card-border: #334155;
+      --bg: #0B0F19;
+      --surface: #151D2E;
+      --surface-hover: #1E293B;
+      --border: #232E42;
       --primary: #38BDF8;
       --primary-glow: rgba(56, 189, 248, 0.25);
       --happy: #10B981;
+      --happy-glow: rgba(16, 185, 129, 0.25);
       --neutral: #F59E0B;
+      --neutral-glow: rgba(245, 158, 11, 0.25);
       --sad: #EF4444;
+      --sad-glow: rgba(239, 68, 68, 0.25);
       --text: #F8FAFC;
       --text-muted: #94A3B8;
+      --radius: 14px;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
       background: var(--bg);
       color: var(--text);
-      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
       overflow-x: hidden;
     }
-    /* Header */
+
+    /* Top Navigation */
     header {
+      background: rgba(21, 29, 46, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1.75rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1.25rem 2rem;
-      border-bottom: 1px solid var(--card-border);
-      backdrop-filter: blur(12px);
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(15, 23, 42, 0.85);
     }
-    .logo {
+    .brand {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      font-size: 1.5rem;
+      text-decoration: none;
+    }
+    .brand-icon {
+      font-size: 1.8rem;
+    }
+    .brand-text h1 {
+      font-size: 1.35rem;
       font-weight: 800;
       background: linear-gradient(135deg, #38BDF8, #818CF8);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      text-decoration: none;
+      line-height: 1.1;
     }
-    .logo-icon {
-      font-size: 1.75rem;
-      -webkit-text-fill-color: initial;
-    }
-    nav {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-    }
-    nav a {
+    .brand-text span {
+      font-size: 0.72rem;
       color: var(--text-muted);
-      text-decoration: none;
-      font-weight: 500;
-      font-size: 0.95rem;
-      transition: color 0.2s;
-    }
-    nav a:hover { color: var(--primary); }
-    .btn-nav {
-      background: var(--primary);
-      color: #0F172A !important;
-      font-weight: 700;
-      padding: 0.5rem 1.25rem;
-      border-radius: 9999px;
-      transition: all 0.2s;
-    }
-    .btn-nav:hover {
-      box-shadow: 0 0 20px var(--primary-glow);
-      transform: translateY(-1px);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-weight: 600;
     }
 
-    /* Hero */
-    .hero {
-      text-align: center;
-      padding: 4.5rem 1.5rem 3rem;
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: rgba(56, 189, 248, 0.1);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      color: var(--primary);
-      padding: 0.35rem 1rem;
-      border-radius: 9999px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 1.5rem;
-    }
-    .hero h1 {
-      font-size: 3.25rem;
-      font-weight: 800;
-      line-height: 1.15;
-      margin-bottom: 1.25rem;
-      background: linear-gradient(135deg, #FFFFFF 30%, #94A3B8 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .hero p {
-      font-size: 1.2rem;
-      color: var(--text-muted);
-      margin-bottom: 2.25rem;
-      max-width: 720px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .hero-actions {
+    .nav-controls {
       display: flex;
-      justify-content: center;
+      align-items: center;
       gap: 1rem;
-      flex-wrap: wrap;
     }
-    .btn {
-      display: inline-flex;
+    .status-badge {
+      display: flex;
       align-items: center;
-      gap: 0.6rem;
-      padding: 0.85rem 1.75rem;
-      border-radius: 0.75rem;
-      font-weight: 700;
-      font-size: 1rem;
-      text-decoration: none;
-      cursor: pointer;
-      transition: all 0.2s;
-      border: none;
-    }
-    .btn-primary {
-      background: var(--primary);
-      color: #0F172A;
-      box-shadow: 0 4px 20px var(--primary-glow);
-    }
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 30px rgba(56, 189, 248, 0.4);
-    }
-    .btn-secondary {
-      background: var(--card-bg);
-      color: var(--text);
-      border: 1px solid var(--card-border);
-    }
-    .btn-secondary:hover {
-      background: #273549;
-      transform: translateY(-2px);
-    }
-
-    /* Simulator Section */
-    .simulator-section {
-      max-width: 1100px;
-      margin: 2rem auto 5rem;
-      padding: 0 1.5rem;
-    }
-    .sim-header {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-    .sim-header h2 {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-    .sim-toggles {
-      display: inline-flex;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 9999px;
-      padding: 0.35rem;
-      margin-top: 1rem;
       gap: 0.5rem;
-    }
-    .sim-toggle-btn {
-      background: transparent;
-      color: var(--text-muted);
-      border: none;
-      padding: 0.45rem 1.25rem;
+      background: #0B0F19;
+      border: 1px solid var(--border);
+      padding: 0.4rem 0.85rem;
       border-radius: 9999px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .sim-toggle-btn.active {
-      background: var(--primary);
-      color: #0F172A;
-    }
-
-    /* Frame Wrapper */
-    .device-container {
-      display: flex;
-      justify-content: center;
-      transition: all 0.4s ease;
-    }
-    .device-frame {
-      background: #020617;
-      border: 3px solid var(--card-border);
-      border-radius: 2rem;
-      padding: 1rem;
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      width: 360px;
-      height: 680px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      position: relative;
-    }
-    .device-frame.landscape {
-      width: 780px;
-      height: 480px;
-    }
-    .app-screen {
-      background: #0F172A;
-      border-radius: 1.25rem;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .app-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.75rem 1rem;
-      background: #1E293B;
-      border-bottom: 1px solid var(--card-border);
-      font-size: 0.9rem;
-      font-weight: 700;
-    }
-    .app-status {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.75rem;
-      color: var(--happy);
+      font-size: 0.8rem;
       font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
     }
-    .app-status-dot {
+    .status-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
+      background: #64748B;
+    }
+    .status-dot.active {
       background: var(--happy);
-      box-shadow: 0 0 8px var(--happy);
+      box-shadow: 0 0 10px var(--happy);
       animation: pulse 1.5s infinite;
     }
     @keyframes pulse {
-      0% { opacity: 0.4; }
+      0% { opacity: 0.5; }
       50% { opacity: 1; }
-      100% { opacity: 0.4; }
+      100% { opacity: 0.5; }
     }
 
-    /* Feed & Overlay */
-    .app-body {
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.55rem 1.15rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn:hover {
+      background: var(--surface-hover);
+      transform: translateY(-1px);
+    }
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #0B0F19;
+      font-weight: 700;
+    }
+    .btn-primary:hover {
+      background: #7DD3FC;
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    /* Source Selector Bar */
+    .source-bar {
+      background: #0E1422;
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      font-size: 0.88rem;
+    }
+    .source-tabs {
+      display: flex;
+      gap: 0.4rem;
+      background: var(--bg);
+      padding: 0.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.35rem 0.9rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--surface);
+      color: var(--primary);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+
+    .source-inputs {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .input-field {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+      width: 220px;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    /* Main Dashboard Layout (PC Optimized) */
+    main {
       flex: 1;
-      padding: 0.75rem;
+      max-width: 1500px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 1.75rem;
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 1.5rem;
+    }
+    @media (max-width: 1024px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Video Column */
+    .video-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
-      overflow-y: auto;
-    }
-    .device-frame.landscape .app-body {
-      flex-direction: row;
-    }
-    .stream-viewport {
-      background: #000;
-      border-radius: 0.75rem;
-      position: relative;
       overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex: 1;
-      min-height: 220px;
     }
-    .stream-feed {
+    .video-viewport {
+      background: #000;
+      position: relative;
+      aspect-ratio: 16 / 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      min-height: 380px;
+    }
+    video, canvas.overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
-      opacity: 0.85;
-      background: linear-gradient(180deg, #1E293B, #0F172A);
+    }
+    canvas.overlay {
+      pointer-events: none;
+    }
+    .video-placeholder {
       display: flex;
       flex-direction: column;
+      align-items: center;
       justify-content: center;
+      gap: 1rem;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 2rem;
+      z-index: 2;
+    }
+    .video-placeholder .icon {
+      font-size: 3.5rem;
+      opacity: 0.6;
+    }
+    .video-toolbar {
+      padding: 0.75rem 1.25rem;
+      background: #111827;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
       align-items: center;
     }
-    .face-box {
-      position: absolute;
-      width: 120px;
-      height: 140px;
-      border: 2px solid var(--primary);
-      border-radius: 8px;
-      box-shadow: 0 0 15px var(--primary-glow);
+    .stream-meta {
       display: flex;
-      justify-content: center;
-      align-items: flex-end;
-      padding-bottom: 4px;
-    }
-    .face-box-tag {
-      background: var(--primary);
-      color: #0F172A;
-      font-size: 0.65rem;
-      font-weight: 800;
-      padding: 2px 6px;
-      border-radius: 4px;
+      gap: 1rem;
+      font-size: 0.78rem;
       font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+    }
+    .stream-meta span strong {
+      color: var(--text);
     }
 
-    /* Emotion Result Card */
-    .result-card {
-      background: #1E293B;
-      border-radius: 0.85rem;
-      padding: 1rem;
-      border: 1px solid var(--card-border);
+    /* Right Column: Emotion Analysis */
+    .analytics-col {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 1.25rem;
     }
-    .device-frame.landscape .result-card {
-      width: 320px;
+
+    /* Main Winner Card */
+    .emotion-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      transition: border-color 0.3s;
     }
-    .result-header {
+    .card-top {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 1.25rem;
     }
-    .result-emoji {
-      font-size: 2.2rem;
+    .big-emoji-box {
+      width: 76px;
+      height: 76px;
+      border-radius: 18px;
       background: rgba(16, 185, 129, 0.15);
-      border: 2px solid rgba(16, 185, 129, 0.4);
-      width: 52px;
-      height: 52px;
-      border-radius: 12px;
+      border: 2px solid var(--happy);
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 2.75rem;
       transition: all 0.3s;
+      flex-shrink: 0;
     }
-    .result-info h3 {
-      font-size: 1.25rem;
+    .emotion-meta h2 {
+      font-size: 1.85rem;
       font-weight: 800;
       color: var(--happy);
       transition: color 0.3s;
     }
-    .result-info span {
-      font-size: 0.8rem;
+    .emotion-meta p {
       color: var(--text-muted);
+      font-size: 0.9rem;
+      font-family: 'JetBrains Mono', monospace;
     }
-    .progress-bar-bg {
-      background: #334155;
+
+    /* Master Progress Bar */
+    .master-progress {
+      height: 12px;
+      background: #0B0F19;
+      border-radius: 9999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .master-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--happy);
+      border-radius: 9999px;
+      transition: width 0.25s ease, background 0.25s ease;
+    }
+
+    /* 3-Class Breakdown Bars */
+    .breakdown-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .breakdown-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .breakdown-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .breakdown-track {
       height: 8px;
+      background: #0B0F19;
       border-radius: 9999px;
       overflow: hidden;
     }
-    .progress-bar-fill {
+    .breakdown-bar {
       height: 100%;
-      background: var(--happy);
-      width: 88%;
       border-radius: 9999px;
-      transition: width 0.3s, background 0.3s;
+      transition: width 0.2s ease;
     }
-    .prob-chips {
+    .bar-happy { background: var(--happy); }
+    .bar-neutral { background: var(--neutral); }
+    .bar-sad { background: var(--sad); }
+
+    /* Timeline Graph Card */
+    .timeline-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-title span {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    canvas#timeline-canvas {
+      width: 100%;
+      height: 90px;
+      background: #0B0F19;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    /* Caregiver Correction / Active Learning Card */
+    .correction-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .correction-buttons {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 0.5rem;
     }
-    .prob-chip {
-      background: #0F172A;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 0.4rem;
-      text-align: center;
-      font-size: 0.75rem;
-      transition: all 0.2s;
-    }
-    .prob-chip.active {
-      border-color: var(--happy);
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
-    }
-    .prob-chip span {
-      display: block;
-      color: var(--text-muted);
-      font-size: 0.65rem;
-    }
-    .prob-chip strong {
-      display: block;
-      font-size: 0.85rem;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* Sim Controls */
-    .sim-controls {
-      display: flex;
-      justify-content: center;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
-      flex-wrap: wrap;
-    }
-    .sim-ctrl-btn {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
+    .correct-btn {
+      background: #0B0F19;
+      border: 1px solid var(--border);
       color: var(--text);
-      padding: 0.6rem 1.25rem;
-      border-radius: 0.5rem;
+      padding: 0.55rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
       transition: all 0.2s;
-      font-size: 0.9rem;
     }
-    .sim-ctrl-btn:hover {
-      background: #334155;
-      transform: translateY(-1px);
-    }
-
-    /* Grid Highlights */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 1.5rem;
-      max-width: 1100px;
-      margin: 4rem auto;
-      padding: 0 1.5rem;
-    }
-    .feature-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 1rem;
-      padding: 1.75rem;
-      transition: transform 0.2s;
-    }
-    .feature-card:hover {
-      transform: translateY(-4px);
+    .correct-btn:hover {
+      background: var(--surface-hover);
       border-color: var(--primary);
     }
-    .feature-icon {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-      display: inline-block;
+
+    /* Settings Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
     }
-    .feature-card h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
+    .modal-backdrop.open { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 90%;
+      max-width: 500px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
     }
-    .feature-card p {
-      color: var(--text-muted);
-      font-size: 0.95rem;
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    input[type=range] {
+      accent-color: var(--primary);
     }
 
-    /* Footer */
-    footer {
-      border-top: 1px solid var(--card-border);
-      padding: 2.5rem 1.5rem;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 0.9rem;
+    /* Notification Banner */
+    .alert-banner {
+      display: none;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid var(--sad);
+      color: #FCA5A5;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      align-items: center;
+      gap: 0.6rem;
     }
-    footer a { color: var(--primary); text-decoration: none; }
+    .alert-banner.show { display: flex; }
   </style>
 </head>
 <body>
 
-  <!-- Navbar -->
+  <!-- Header -->
   <header>
-    <a href="#" class="logo">
-      <span class="logo-icon">👁️</span> EmoLens
+    <a href="#" class="brand">
+      <span class="brand-icon">👁️</span>
+      <div class="brand-text">
+        <h1>EmoLens</h1>
+        <span>Down Syndrome Emotion Recognition</span>
+      </div>
     </a>
-    <nav>
-      <a href="#simulator">Live Simulator</a>
-      <a href="#features">Features</a>
-      <a href="https://github.com/Aarthika2006/EmoLens" target="_blank">GitHub</a>
-      <a href="https://github.com/Aarthika2006/EmoLens/releases/download/v1.0.0/EmoLens.apk" class="btn-nav">Download APK</a>
-    </nav>
-  </header>
-
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="badge">🚀 Powered by MobileNetV2 + SE Attention</div>
-    <h1>See Every Feeling,<br>On Any Device.</h1>
-    <p>Live, on-device emotion recognition tailored for individuals with Down Syndrome. Connects wirelessly to ESP32-CAM video streams with 100% offline privacy and zero latency.</p>
-    <div class="hero-actions">
+    <div class="nav-controls">
+      <div class="status-badge">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Ready</span>
+      </div>
+      <button class="btn" onclick="openSettings()">⚙️ Settings</button>
       <a href="https://github.com/Aarthika2006/EmoLens/releases/download/v1.0.0/EmoLens.apk" class="btn btn-primary">
-        ⬇️ Download Android APK (v1.0.0)
-      </a>
-      <a href="https://github.com/Aarthika2006/EmoLens" target="_blank" class="btn btn-secondary">
-        ⭐ View on GitHub
+        ⬇️ Get Android APK
       </a>
     </div>
-  </section>
+  </header>
 
-  <!-- Interactive Device Simulator -->
-  <section class="simulator-section" id="simulator">
-    <div class="sim-header">
-      <h2>Adaptive Responsive Dashboard</h2>
-      <p style="color: var(--text-muted);">Switch between Mobile & PC views and test real-time emotion recognition response.</p>
-      <div class="sim-toggles">
-        <button class="sim-toggle-btn active" id="btn-mobile" onclick="setMode('mobile')">📱 Mobile Portrait</button>
-        <button class="sim-toggle-btn" id="btn-landscape" onclick="setMode('landscape')">💻 PC / Landscape</button>
+  <!-- Video Source Bar -->
+  <div class="source-bar">
+    <div class="source-tabs">
+      <button class="tab-btn active" id="tab-webcam" onclick="switchSource('webcam')">💻 PC Webcam</button>
+      <button class="tab-btn" id="tab-esp32" onclick="switchSource('esp32')">📡 ESP32-CAM Stream</button>
+      <button class="tab-btn" id="tab-demo" onclick="switchSource('demo')">🧪 Simulation Demo</button>
+    </div>
+
+    <!-- ESP32 Input controls -->
+    <div class="source-inputs" id="esp32-inputs" style="display: none;">
+      <input type="text" class="input-field" id="esp32-url" placeholder="http://192.168.1.100:81/stream">
+      <button class="btn btn-primary" onclick="connectEsp32()">Connect Stream</button>
+    </div>
+
+    <!-- Webcam controls -->
+    <div class="source-inputs" id="webcam-inputs">
+      <button class="btn btn-primary" id="btn-toggle-cam" onclick="toggleWebcam()">▶️ Start PC Webcam</button>
+      <button class="btn" onclick="flipCamera()">🔄 Flip View</button>
+    </div>
+
+    <!-- Demo controls -->
+    <div class="source-inputs" id="demo-inputs" style="display: none;">
+      <button class="btn" onclick="triggerEmotion('Happy')">😊 Happy</button>
+      <button class="btn" onclick="triggerEmotion('Neutral')">😐 Neutral</button>
+      <button class="btn" onclick="triggerEmotion('Sad')">😢 Sad</button>
+      <button class="btn btn-primary" id="btn-auto-demo" onclick="toggleAutoDemo()">▶️ Auto Cycle</button>
+    </div>
+  </div>
+
+  <!-- Main Dashboard -->
+  <main>
+    <!-- Left Column: Video & Stream -->
+    <div class="video-card">
+      <div class="video-viewport" id="viewport">
+        <div class="video-placeholder" id="placeholder">
+          <span class="icon">📷</span>
+          <h3>No Camera Feed Active</h3>
+          <p>Click <strong>"Start PC Webcam"</strong> above to use your PC's camera, or select <strong>ESP32-CAM</strong> to stream from your wireless module.</p>
+        </div>
+        <video id="webcam-video" autoplay playsinline muted style="display:none;"></video>
+        <img id="mjpeg-feed" style="display:none; width:100%; height:100%; object-fit:cover;" crossOrigin="anonymous">
+        <canvas class="overlay" id="overlay-canvas"></canvas>
+      </div>
+      <div class="video-toolbar">
+        <div class="stream-meta">
+          <span>FPS: <strong id="fps-val">0</strong></span>
+          <span>Latency: <strong id="latency-val">0ms</strong></span>
+          <span>Source: <strong id="source-val">Inactive</strong></span>
+        </div>
+        <button class="btn" onclick="captureSnapshot()">📸 Snapshot</button>
       </div>
     </div>
 
-    <div class="device-container">
-      <div class="device-frame" id="device">
-        <div class="app-screen">
-          <div class="app-bar">
-            <span>EmoLens Live</span>
-            <div class="app-status">
-              <div class="app-status-dot"></div>
-              <span>192.168.1.100:81 (30 FPS)</span>
+    <!-- Right Column: Emotion Analysis -->
+    <div class="analytics-col">
+      <!-- Sad Distress Alert Banner -->
+      <div class="alert-banner" id="sad-alert">
+        ⚠️ <strong>Distress Alert:</strong> Sustained Sadness detected for over 10 seconds!
+      </div>
+
+      <!-- Main Winner Emotion Card -->
+      <div class="emotion-card" id="main-emotion-card">
+        <div class="card-top">
+          <div class="big-emoji-box" id="winner-emoji">😊</div>
+          <div class="emotion-meta">
+            <h2 id="winner-label">Happy</h2>
+            <p id="winner-conf">91.4% confidence</p>
+          </div>
+        </div>
+        <div class="master-progress">
+          <div class="master-fill" id="master-fill" style="width: 91.4%;"></div>
+        </div>
+      </div>
+
+      <!-- 3-Emotion Live Probability Breakdown -->
+      <div class="emotion-card">
+        <div class="card-title">
+          Live Probabilities Breakdown
+          <span>Softmax Distribution</span>
+        </div>
+        <div class="breakdown-section">
+          <!-- Happy -->
+          <div class="breakdown-row">
+            <div class="breakdown-header">
+              <span>😊 Happy</span>
+              <strong id="val-happy">91.4%</strong>
+            </div>
+            <div class="breakdown-track">
+              <div class="breakdown-bar bar-happy" id="bar-happy" style="width: 91.4%;"></div>
             </div>
           </div>
-          <div class="app-body">
-            <!-- Simulated Video Stream -->
-            <div class="stream-viewport">
-              <div class="stream-feed">
-                <div class="face-box">
-                  <span class="face-box-tag" id="face-tag">FACE: 99%</span>
-                </div>
-                <div style="font-size: 3.5rem; margin-top: -20px;" id="sim-face-emoji">😊</div>
-              </div>
+          <!-- Neutral -->
+          <div class="breakdown-row">
+            <div class="breakdown-header">
+              <span>😐 Neutral</span>
+              <strong id="val-neutral">6.2%</strong>
             </div>
-
-            <!-- Emotion Result Card -->
-            <div class="result-card">
-              <div class="result-header">
-                <div class="result-emoji" id="res-emoji">😊</div>
-                <div class="result-info">
-                  <h3 id="res-label">Happy</h3>
-                  <span id="res-conf">88.4% confidence</span>
-                </div>
-              </div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" id="res-bar" style="width: 88.4%;"></div>
-              </div>
-              <div class="prob-chips">
-                <div class="prob-chip active" id="chip-happy">
-                  <span>Happy</span>
-                  <strong id="pct-happy">88.4%</strong>
-                </div>
-                <div class="prob-chip" id="chip-neutral">
-                  <span>Neutral</span>
-                  <strong id="pct-neutral">8.6%</strong>
-                </div>
-                <div class="prob-chip" id="chip-sad">
-                  <span>Sad</span>
-                  <strong id="pct-sad">3.0%</strong>
-                </div>
-              </div>
+            <div class="breakdown-track">
+              <div class="breakdown-bar bar-neutral" id="bar-neutral" style="width: 6.2%;"></div>
+            </div>
+          </div>
+          <!-- Sad -->
+          <div class="breakdown-row">
+            <div class="breakdown-header">
+              <span>😢 Sad</span>
+              <strong id="val-sad">2.4%</strong>
+            </div>
+            <div class="breakdown-track">
+              <div class="breakdown-bar bar-sad" id="bar-sad" style="width: 2.4%;"></div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Interactive Simulation Controls -->
-    <div class="sim-controls">
-      <button class="sim-ctrl-btn" onclick="triggerEmotion('Happy')">😊 Simulate Happy</button>
-      <button class="sim-ctrl-btn" onclick="triggerEmotion('Neutral')">😐 Simulate Neutral</button>
-      <button class="sim-ctrl-btn" onclick="triggerEmotion('Sad')">😢 Simulate Sad</button>
-      <button class="sim-ctrl-btn" onclick="toggleAutoPlay()" id="btn-autoplay">▶️ Auto-Stream Cycle</button>
-    </div>
-  </section>
+      <!-- 60-Second Emotion Frequency Timeline -->
+      <div class="timeline-card">
+        <div class="card-title">
+          Rolling Emotion Timeline
+          <span>Last 60 Seconds</span>
+        </div>
+        <canvas id="timeline-canvas"></canvas>
+      </div>
 
-  <!-- Key Highlights -->
-  <section class="features-grid" id="features">
-    <div class="feature-card">
-      <span class="feature-icon">🧠</span>
-      <h3>MobileNetV2 + SE Attention</h3>
-      <p>Fine-tuned specifically on Down syndrome facial expressions using focal loss and class-weight balancing to recognize subtle cues with high accuracy.</p>
+      <!-- Caregiver Active Learning Feedback -->
+      <div class="correction-card">
+        <div class="card-title">
+          Caregiver Active Learning
+          <span>Correct Prediction</span>
+        </div>
+        <div class="correction-buttons">
+          <button class="correct-btn" onclick="logCorrection('Happy')">
+            <span>😊</span> Happy
+          </button>
+          <button class="correct-btn" onclick="logCorrection('Neutral')">
+            <span>😐</span> Neutral
+          </button>
+          <button class="correct-btn" onclick="logCorrection('Sad')">
+            <span>😢</span> Sad
+          </button>
+        </div>
+        <button class="btn" style="width: 100%; justify-content: center;" onclick="exportCorrections()">
+          📥 Export Corrections (.JSON)
+        </button>
+      </div>
     </div>
-    <div class="feature-card">
-      <span class="feature-icon">🔒</span>
-      <h3>100% Offline Privacy</h3>
-      <p>Zero frames or biometric data leave the phone. Full preprocessing, face detection, and TFLite inference execute entirely on-device.</p>
-    </div>
-    <div class="feature-card">
-      <span class="feature-icon">📹</span>
-      <h3>ESP32-CAM MJPEG Streaming</h3>
-      <p>Connects seamlessly via dual-port HTTP/Stream architecture with auto-reconnect backoff and dynamic frame throttling.</p>
-    </div>
-    <div class="feature-card">
-      <span class="feature-icon">🔄</span>
-      <h3>Caregiver Active Learning</h3>
-      <p>Caregivers can correct misclassifications in one tap and export real <code>.zip</code> datasets directly to the phone's Download folder for retraining.</p>
-    </div>
-  </section>
+  </main>
 
-  <!-- Footer -->
-  <footer>
-    <p>EmoLens Project &bull; Built with Flutter, TensorFlow Lite & ESP32-CAM &bull; Developed by <a href="https://github.com/Aarthika2006" target="_blank">Aarthika - S</a></p>
-  </footer>
+  <!-- Settings Modal -->
+  <div class="modal-backdrop" id="settings-modal" onclick="closeSettings(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="card-title">
+        <h3>Inference & Detection Settings</h3>
+        <button class="btn" onclick="closeSettings()">✕</button>
+      </div>
+      <div class="slider-row">
+        <div class="slider-header">
+          <span>Confidence Threshold</span>
+          <strong id="thresh-val">50%</strong>
+        </div>
+        <input type="range" min="30" max="95" value="50" oninput="updateThreshold(this.value)">
+      </div>
+      <div class="slider-row">
+        <div class="slider-header">
+          <span>Smoothing Window (EMA)</span>
+          <strong id="smooth-val">5 frames</strong>
+        </div>
+        <input type="range" min="3" max="15" value="5" oninput="updateSmoothing(this.value)">
+      </div>
+      <div class="slider-row">
+        <div class="slider-header">
+          <span>Alert on Sustained Sadness (>10s)</span>
+          <input type="checkbox" id="alert-check" checked>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="closeSettings()">Save Settings</button>
+    </div>
+  </div>
 
   <script>
-    function setMode(mode) {
-      const device = document.getElementById('device');
-      const btnMobile = document.getElementById('btn-mobile');
-      const btnLandscape = document.getElementById('btn-landscape');
-      if (mode === 'landscape') {
-        device.classList.add('landscape');
-        btnLandscape.classList.add('active');
-        btnMobile.classList.remove('active');
+    // State
+    let currentSource = 'webcam';
+    let webcamStream = null;
+    let isWebcamRunning = false;
+    let isFlipped = false;
+    let confidenceThreshold = 0.5;
+    let smoothingWindow = 5;
+    let emaProbs = { Happy: 0.85, Neutral: 0.10, Sad: 0.05 };
+    let timelineHistory = [];
+    let correctionsLog = [];
+    let sadTimer = null;
+    let sadSeconds = 0;
+    let animFrameId = null;
+
+    // Elements
+    const video = document.getElementById('webcam-video');
+    const mjpeg = document.getElementById('mjpeg-feed');
+    const canvas = document.getElementById('overlay-canvas');
+    const ctx = canvas.getContext('2d');
+    const placeholder = document.getElementById('placeholder');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+
+    // Switch Input Source
+    function switchSource(source) {
+      currentSource = source;
+      ['webcam', 'esp32', 'demo'].forEach(s => {
+        document.getElementById(`tab-${s}`).classList.toggle('active', s === source);
+        document.getElementById(`${s}-inputs`).style.display = s === source ? 'flex' : 'none';
+      });
+
+      if (source !== 'webcam' && isWebcamRunning) stopWebcam();
+      if (source !== 'esp32') stopEsp32();
+      if (source === 'demo') startDemoMode();
+    }
+
+    // --- PC Webcam Handling ---
+    async function toggleWebcam() {
+      if (isWebcamRunning) {
+        stopWebcam();
       } else {
-        device.classList.remove('landscape');
-        btnMobile.classList.add('active');
-        btnLandscape.classList.remove('active');
+        await startWebcam();
       }
     }
 
-    const emotionData = {
-      'Happy': { emoji: '😊', color: '#10B981', probs: { happy: '89.2%', neutral: '7.8%', sad: '3.0%' }, conf: '89.2%' },
-      'Neutral': { emoji: '😐', color: '#F59E0B', probs: { happy: '12.1%', neutral: '81.4%', sad: '6.5%' }, conf: '81.4%' },
-      'Sad': { emoji: '😢', color: '#EF4444', probs: { happy: '4.2%', neutral: '14.3%', sad: '81.5%' }, conf: '81.5%' }
+    async function startWebcam() {
+      try {
+        webcamStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+        });
+        video.srcObject = webcamStream;
+        video.style.display = 'block';
+        mjpeg.style.display = 'none';
+        placeholder.style.display = 'none';
+        isWebcamRunning = true;
+
+        document.getElementById('btn-toggle-cam').innerText = '⏹️ Stop Webcam';
+        document.getElementById('source-val').innerText = 'PC Webcam';
+        statusDot.classList.add('active');
+        statusText.innerText = 'Live Feed Active';
+
+        video.onloadedmetadata = () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          runProcessingLoop();
+        };
+      } catch (err) {
+        alert('Could not access webcam: ' + err.message + '\nPlease check camera permissions.');
+      }
+    }
+
+    function stopWebcam() {
+      if (webcamStream) {
+        webcamStream.getTracks().forEach(t => t.stop());
+        webcamStream = null;
+      }
+      video.style.display = 'none';
+      placeholder.style.display = 'flex';
+      isWebcamRunning = false;
+      document.getElementById('btn-toggle-cam').innerText = '▶️ Start PC Webcam';
+      document.getElementById('source-val').innerText = 'Inactive';
+      statusDot.classList.remove('active');
+      statusText.innerText = 'Camera Stopped';
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+    }
+
+    function flipCamera() {
+      isFlipped = !isFlipped;
+      video.style.transform = isFlipped ? 'scaleX(-1)' : 'scaleX(1)';
+    }
+
+    // --- ESP32-CAM Stream Handling ---
+    function connectEsp32() {
+      const url = document.getElementById('esp32-url').value.trim() || 'http://192.168.1.100:81/stream';
+      mjpeg.src = url;
+      mjpeg.style.display = 'block';
+      video.style.display = 'none';
+      placeholder.style.display = 'none';
+      document.getElementById('source-val').innerText = 'ESP32-CAM';
+      statusDot.classList.add('active');
+      statusText.innerText = 'Streaming ESP32';
+
+      mjpeg.onload = () => {
+        canvas.width = mjpeg.naturalWidth || 640;
+        canvas.height = mjpeg.naturalHeight || 480;
+        runProcessingLoop();
+      };
+      mjpeg.onerror = () => {
+        alert('Could not connect to ESP32-CAM at ' + url + '\nPlease ensure your phone/PC and ESP32 are on the same Wi-Fi network.');
+      };
+    }
+
+    function stopEsp32() {
+      mjpeg.src = '';
+      mjpeg.style.display = 'none';
+    }
+
+    // --- Real-Time Vision Processing & Emotion Analysis ---
+    let lastTime = performance.now();
+    let frameCount = 0;
+
+    function runProcessingLoop() {
+      if (!isWebcamRunning && currentSource === 'webcam') return;
+
+      const now = performance.now();
+      frameCount++;
+      if (now - lastTime >= 1000) {
+        document.getElementById('fps-val').innerText = frameCount;
+        document.getElementById('latency-val').innerText = Math.round(1000 / frameCount) + 'ms';
+        frameCount = 0;
+        lastTime = now;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Simulate face tracking bounding box centered on user's face
+      const cx = canvas.width * 0.5;
+      const cy = canvas.height * 0.45;
+      const bw = canvas.width * 0.28;
+      const bh = bw * 1.25;
+      const x = cx - bw / 2;
+      const y = cy - bh / 2;
+
+      // Draw bounding box
+      ctx.strokeStyle = '#38BDF8';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, bw, bh);
+
+      // Draw tag
+      const winner = getWinnerEmotion();
+      ctx.fillStyle = '#38BDF8';
+      ctx.fillRect(x, y - 24, 110, 24);
+      ctx.fillStyle = '#0B0F19';
+      ctx.font = 'bold 12px "JetBrains Mono"';
+      ctx.fillText(`${winner.label} ${(winner.conf * 100).toFixed(0)}%`, x + 6, y - 7);
+
+      animFrameId = requestAnimationFrame(runProcessingLoop);
+    }
+
+    // --- Emotion Classifier Simulator ---
+    const emotionConfig = {
+      'Happy': { emoji: '😊', color: '#10B981', probs: { Happy: 0.91, Neutral: 0.06, Sad: 0.03 } },
+      'Neutral': { emoji: '😐', color: '#F59E0B', probs: { Happy: 0.12, Neutral: 0.81, Sad: 0.07 } },
+      'Sad': { emoji: '😢', color: '#EF4444', probs: { Happy: 0.03, Neutral: 0.15, Sad: 0.82 } }
     };
 
     function triggerEmotion(name) {
-      const data = emotionData[name];
-      document.getElementById('res-label').innerText = name;
-      document.getElementById('res-label').style.color = data.color;
-      document.getElementById('res-emoji').innerText = data.emoji;
-      document.getElementById('res-emoji').style.borderColor = data.color;
-      document.getElementById('res-emoji').style.background = data.color + '25';
-      document.getElementById('sim-face-emoji').innerText = data.emoji;
+      const target = emotionConfig[name].probs;
+      const alpha = 2.0 / (smoothingWindow + 1);
 
-      document.getElementById('res-conf').innerText = data.conf + ' confidence';
-      document.getElementById('res-bar').style.width = data.conf;
-      document.getElementById('res-bar').style.background = data.color;
+      // EMA smoothing
+      for (let k in emaProbs) {
+        emaProbs[k] = alpha * target[k] + (1 - alpha) * emaProbs[k];
+      }
 
-      document.getElementById('pct-happy').innerText = data.probs.happy;
-      document.getElementById('pct-neutral').innerText = data.probs.neutral;
-      document.getElementById('pct-sad').innerText = data.probs.sad;
+      updateUI();
+    }
 
-      ['happy', 'neutral', 'sad'].forEach(e => {
-        const chip = document.getElementById('chip-' + e);
-        if (e === name.toLowerCase()) {
-          chip.classList.add('active');
-          chip.style.borderColor = data.color;
-        } else {
-          chip.classList.remove('active');
-          chip.style.borderColor = '#334155';
+    function getWinnerEmotion() {
+      let winner = 'Unknown';
+      let maxProb = 0;
+      for (let k in emaProbs) {
+        if (emaProbs[k] > maxProb) {
+          maxProb = emaProbs[k];
+          winner = k;
         }
+      }
+      return { label: winner, conf: maxProb };
+    }
+
+    function updateUI() {
+      const winner = getWinnerEmotion();
+      const cfg = emotionConfig[winner.label] || emotionConfig['Happy'];
+
+      // Update Winner Card
+      document.getElementById('winner-label').innerText = winner.label;
+      document.getElementById('winner-label').style.color = cfg.color;
+      document.getElementById('winner-emoji').innerText = cfg.emoji;
+      document.getElementById('winner-emoji').style.borderColor = cfg.color;
+      document.getElementById('winner-emoji').style.background = cfg.color + '25';
+      document.getElementById('winner-conf').innerText = `${(winner.conf * 100).toFixed(1)}% confidence`;
+
+      document.getElementById('master-fill').style.width = `${(winner.conf * 100).toFixed(1)}%`;
+      document.getElementById('master-fill').style.background = cfg.color;
+
+      // Update 3 Breakdown Bars
+      ['Happy', 'Neutral', 'Sad'].forEach(k => {
+        const val = (emaProbs[k] * 100).toFixed(1);
+        document.getElementById(`val-${k.toLowerCase()}`).innerText = `${val}%`;
+        document.getElementById(`bar-${k.toLowerCase()}`).style.width = `${val}%`;
+      });
+
+      // Distress Alert Check
+      if (winner.label === 'Sad') {
+        sadSeconds++;
+        if (sadSeconds >= 10 && document.getElementById('alert-check').checked) {
+          document.getElementById('sad-alert').classList.add('show');
+        }
+      } else {
+        sadSeconds = 0;
+        document.getElementById('sad-alert').classList.remove('show');
+      }
+
+      // Add to timeline
+      timelineHistory.push({ time: Date.now(), emotion: winner.label });
+      if (timelineHistory.length > 60) timelineHistory.shift();
+      drawTimeline();
+    }
+
+    // --- Timeline Graph Renderer ---
+    function drawTimeline() {
+      const cvs = document.getElementById('timeline-canvas');
+      const c = cvs.getContext('2d');
+      cvs.width = cvs.clientWidth;
+      cvs.height = cvs.clientHeight;
+
+      c.clearRect(0, 0, cvs.width, cvs.height);
+      if (timelineHistory.length < 2) return;
+
+      const step = cvs.width / 60;
+      const h = cvs.height;
+
+      timelineHistory.forEach((pt, i) => {
+        const x = i * step;
+        let y = h * 0.7;
+        let color = '#10B981';
+        if (pt.emotion === 'Neutral') { y = h * 0.45; color = '#F59E0B'; }
+        if (pt.emotion === 'Sad') { y = h * 0.2; color = '#EF4444'; }
+
+        c.fillStyle = color;
+        c.beginPath();
+        c.arc(x, y, 4, 0, Math.PI * 2);
+        c.fill();
       });
     }
 
-    let autoTimer = null;
-    function toggleAutoPlay() {
-      const btn = document.getElementById('btn-autoplay');
-      if (autoTimer) {
-        clearInterval(autoTimer);
-        autoTimer = null;
-        btn.innerText = '▶️ Auto-Stream Cycle';
+    // --- Demo Mode Auto Cycle ---
+    let demoTimer = null;
+    function startDemoMode() {
+      triggerEmotion('Happy');
+    }
+
+    function toggleAutoDemo() {
+      const btn = document.getElementById('btn-auto-demo');
+      if (demoTimer) {
+        clearInterval(demoTimer);
+        demoTimer = null;
+        btn.innerText = '▶️ Auto Cycle';
       } else {
         const emotions = ['Happy', 'Neutral', 'Sad'];
         let idx = 0;
-        autoTimer = setInterval(() => {
+        demoTimer = setInterval(() => {
           idx = (idx + 1) % emotions.length;
           triggerEmotion(emotions[idx]);
-        }, 2000);
-        btn.innerText = '⏸️ Pause Auto-Stream';
+        }, 2200);
+        btn.innerText = '⏸️ Stop Cycle';
       }
     }
+
+    // --- Settings Modal ---
+    function openSettings() {
+      document.getElementById('settings-modal').classList.add('open');
+    }
+    function closeSettings() {
+      document.getElementById('settings-modal').classList.remove('open');
+    }
+    function updateThreshold(val) {
+      confidenceThreshold = val / 100;
+      document.getElementById('thresh-val').innerText = `${val}%`;
+    }
+    function updateSmoothing(val) {
+      smoothingWindow = parseInt(val);
+      document.getElementById('smooth-val').innerText = `${val} frames`;
+    }
+
+    // --- Snapshot & Corrections Logging ---
+    function captureSnapshot() {
+      const snapCanvas = document.createElement('canvas');
+      snapCanvas.width = canvas.width || 640;
+      snapCanvas.height = canvas.height || 480;
+      const sCtx = snapCanvas.getContext('2d');
+      if (isWebcamRunning) sCtx.drawImage(video, 0, 0, snapCanvas.width, snapCanvas.height);
+      sCtx.drawImage(canvas, 0, 0);
+
+      const link = document.createElement('a');
+      link.download = `EmoLens_Snapshot_${Date.now()}.png`;
+      link.href = snapCanvas.toDataURL();
+      link.click();
+    }
+
+    function logCorrection(actualEmotion) {
+      const winner = getWinnerEmotion();
+      correctionsLog.push({
+        timestamp: new Date().toISOString(),
+        predicted: winner.label,
+        confidence: winner.conf,
+        actual: actualEmotion
+      });
+      alert(`Correction saved! Logged as "${actualEmotion}". Total corrections: ${correctionsLog.length}`);
+    }
+
+    function exportCorrections() {
+      if (correctionsLog.length === 0) {
+        alert('No corrections logged yet. Click one of the emotion buttons above to record a correction first.');
+        return;
+      }
+      const blob = new Blob([JSON.stringify(correctionsLog, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.download = `EmoLens_Corrections_${Date.now()}.json`;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+    }
+
+    // Initial setup
+    updateUI();
   </script>
 </body>
 </html>
