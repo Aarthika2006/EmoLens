@@ -46,8 +46,17 @@ class AppConstants {
 
   // Settings keys (shared_preferences)
   static const String keyCameraIp = 'camera_ip';
+  static const String keyCameraSourceType = 'camera_source_type';
   static const String keyHttpPort = 'http_port';
   static const String keyStreamPort = 'stream_port';
+  static const String keyStreamPath = 'stream_path';
+  static const String keyCapturePath = 'capture_path';
+
+  // Default camera paths
+  static const String defaultEsp32StreamPath = '/stream';
+  static const String defaultEsp32CapturePath = '/capture';
+  static const String defaultIpWebcamStreamPath = '/video';
+  static const String defaultIpWebcamCapturePath = '/shot.jpg';
   static const String keyStreamMode = 'stream_mode';
   static const String keyResolution = 'resolution';
   static const String keyJpegQuality = 'jpeg_quality';
@@ -120,6 +129,75 @@ enum ConnectionStatus {
         return '🔄';
       case ConnectionStatus.offline:
         return '❌';
+    }
+  }
+}
+
+/// Supported camera source types (ESP32-CAM hardware vs Mobile Phone IP Webcam).
+enum CameraSourceType {
+  esp32Cam,
+  ipWebcam,
+  custom;
+
+  String get displayName {
+    switch (this) {
+      case CameraSourceType.esp32Cam:
+        return 'ESP32-CAM';
+      case CameraSourceType.ipWebcam:
+        return 'Phone IP Webcam';
+      case CameraSourceType.custom:
+        return 'Custom Stream';
+    }
+  }
+
+  String get subtitle {
+    switch (this) {
+      case CameraSourceType.esp32Cam:
+        return 'ESP32 hardware module (ports 80 & 81, /stream)';
+      case CameraSourceType.ipWebcam:
+        return 'Android IP Webcam app / Phone camera (port 8080, /video)';
+      case CameraSourceType.custom:
+        return 'Direct MJPEG or Snapshot HTTP stream';
+    }
+  }
+
+  int get defaultHttpPort {
+    switch (this) {
+      case CameraSourceType.esp32Cam:
+        return 80;
+      case CameraSourceType.ipWebcam:
+      case CameraSourceType.custom:
+        return 8080;
+    }
+  }
+
+  int get defaultStreamPort {
+    switch (this) {
+      case CameraSourceType.esp32Cam:
+        return 81;
+      case CameraSourceType.ipWebcam:
+      case CameraSourceType.custom:
+        return 8080;
+    }
+  }
+
+  String get defaultStreamPath {
+    switch (this) {
+      case CameraSourceType.esp32Cam:
+        return '/stream';
+      case CameraSourceType.ipWebcam:
+      case CameraSourceType.custom:
+        return '/video';
+    }
+  }
+
+  String get defaultCapturePath {
+    switch (this) {
+      case CameraSourceType.esp32Cam:
+        return '/capture';
+      case CameraSourceType.ipWebcam:
+      case CameraSourceType.custom:
+        return '/shot.jpg';
     }
   }
 }

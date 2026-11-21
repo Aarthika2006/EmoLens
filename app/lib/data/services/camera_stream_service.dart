@@ -37,12 +37,14 @@ class CameraStreamService {
   final _statusController = StreamController<ConnectionStatus>.broadcast();
   Stream<ConnectionStatus> get statusStream => _statusController.stream;
 
-  /// Start streaming from the ESP32-CAM.
+  /// Start streaming from either ESP32-CAM or Mobile IP Webcam.
   Future<void> startStream({
     required String ip,
     int httpPort = AppConstants.defaultHttpPort,
     int streamPort = AppConstants.defaultStreamPort,
     StreamMode mode = StreamMode.mjpeg,
+    String streamPath = '/stream',
+    String capturePath = '/capture',
   }) async {
     await stopStream();
     _isStreaming = true;
@@ -50,23 +52,67 @@ class CameraStreamService {
     _statusController.add(ConnectionStatus.connecting);
 
     if (mode == StreamMode.mjpeg) {
-      await _startMjpegStream(ip, streamPort);
+      await _startMjpegStream(ip, streamPort, streamPath);
     } else {
-      _startCapturePolling(ip, httpPort);
+      _startCapturePolling(ip, httpPort, capturePath);
     }
   }
 
-  /// Start MJPEG stream parsing.
-  Future<void> _startMjpegStream(String ip, int port) async {
+  /// Builds a Uri from IP, port, and path, handling cases where the user entered
+  /// a raw IP (192.168.1.100), host:port, or a full URL.
+  Uri _buildUri(String hostOrIp, int port, String path) {
+    var raw = hostOrIp.trim();
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      final parsed = Uri.tryParse(raw);
+      if (parsed != null && parsed.host.isNotEmpty) {
+        final p = parsed.hasPort ? parsed.port : port;
+        final targetPath = (parsed.path.isNotEmpty && parsed.path != '/')
+            ? parsed.path
+            : path;
+        return Uri(
+          scheme: parsed.scheme,
+          host: parsed.host,
+          port: p,
+          path: targetPath,
+        );
+      }
+    }
+    // Clean trailing slashes or colons
+    raw = raw.replaceAll(RegExp(r'/+$'), '');
+    if (raw.contains(':')) {
+      final parts = raw.split(':');
+      final host = parts[0];
+      final customPort = int.tryParse(parts[1]) ?? port;
+      return Uri(scheme: 'http', host: host, port: customPort, path: path);
+    }
+    return Uri(scheme: 'http', host: raw, port: port, path: path);
+  }
+
+  /// Start MJPEG stream parsing with auto-fallback between /stream and /video.
+  Future<void> _startMjpegStream(String ip, int port, String path) async {
     try {
       _client = http.Client();
-      final uri = Uri.parse('http://$ip:$port/stream');
-      final request = http.Request('GET', uri);
-      final response = await _client!.send(request).timeout(
+      var uri = _buildUri(ip, port, path);
+      var request = http.Request('GET', uri);
+      var response = await _client!.send(request).timeout(
             const Duration(seconds: 10),
           );
 
-      if (response.statusCode != 200) {
+      // Automatic path fallback: if /stream 404s, try IP Webcam's /video; if /video 404s, try /stream
+      if (response.statusCode == 404) {
+        final altPath = path == '/stream' ? '/video' : '/stream';
+        uri = _buildUri(ip, port, altPath);
+        request = http.Request('GET', uri);
+        final altResponse = await _client!.send(request).timeout(
+              const Duration(seconds: 8),
+            );
+        if (altResponse.statusCode == 200) {
+          response = altResponse;
+        } else {
+          _handleStreamError('HTTP ${response.statusCode}');
+          return;
+        }
+      } else if (response.statusCode != 200) {
         _handleStreamError('HTTP ${response.statusCode}');
         return;
       }
@@ -98,28 +144,37 @@ class CameraStreamService {
   }
 
   /// Start capture polling fallback.
-  void _startCapturePolling(String ip, int port) {
+  void _startCapturePolling(String ip, int port, String path) {
     _statusController.add(ConnectionStatus.connected);
 
     _pollingTimer = Timer.periodic(
       const Duration(milliseconds: AppConstants.capturePollingIntervalMs),
-      (_) => _fetchSingleFrame(ip, port),
+      (_) => _fetchSingleFrame(ip, port, path),
     );
 
     // Fetch first frame immediately
-    _fetchSingleFrame(ip, port);
+    _fetchSingleFrame(ip, port, path);
   }
 
-  Future<void> _fetchSingleFrame(String ip, int port) async {
+  Future<void> _fetchSingleFrame(String ip, int port, String path) async {
     try {
       final startTime = DateTime.now();
-      final response = await http
-          .get(Uri.parse('http://$ip:$port/capture'))
-          .timeout(const Duration(seconds: 5));
+      var uri = _buildUri(ip, port, path);
+      var response = await http.get(uri).timeout(const Duration(seconds: 5));
+
+      // Automatic fallback for capture: if /capture 404s, try /shot.jpg (IP Webcam)
+      if (response.statusCode == 404) {
+        final altPath = path == '/capture' ? '/shot.jpg' : '/capture';
+        uri = _buildUri(ip, port, altPath);
+        final altResponse =
+            await http.get(uri).timeout(const Duration(seconds: 4));
+        if (altResponse.statusCode == 200) {
+          response = altResponse;
+        }
+      }
 
       if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
-        _latencyMs =
-            DateTime.now().difference(startTime).inMilliseconds;
+        _latencyMs = DateTime.now().difference(startTime).inMilliseconds;
         _updateFps();
         _statusController.add(ConnectionStatus.connected);
         _reconnectAttempts = 0;

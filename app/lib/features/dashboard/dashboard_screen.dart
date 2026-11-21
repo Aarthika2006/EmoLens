@@ -55,6 +55,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       httpPort: settings.httpPort,
       streamPort: settings.streamPort,
       mode: settings.streamMode,
+      streamPath: settings.streamPath,
+      capturePath: settings.capturePath,
     );
     _startInferenceLoop();
   }
@@ -454,7 +456,7 @@ class _NoCameraSetupCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Set up your ESP32-CAM IP address in Settings to connect to live stream.',
+                  'Set up your ESP32-CAM or Mobile IP Webcam in Settings to connect.',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     height: 1.5,

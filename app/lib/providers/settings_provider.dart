@@ -23,6 +23,34 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     state = AsyncData(state.value!.copyWith(cameraIp: ip));
   }
 
+  Future<void> updateCameraSourceType(CameraSourceType type) async {
+    final repo = ref.read(settingsRepositoryProvider);
+    await repo.setCameraSourceType(type);
+    await repo.setHttpPort(type.defaultHttpPort);
+    await repo.setStreamPort(type.defaultStreamPort);
+    await repo.setStreamPath(type.defaultStreamPath);
+    await repo.setCapturePath(type.defaultCapturePath);
+    state = AsyncData(state.value!.copyWith(
+      cameraSourceType: type,
+      httpPort: type.defaultHttpPort,
+      streamPort: type.defaultStreamPort,
+      streamPath: type.defaultStreamPath,
+      capturePath: type.defaultCapturePath,
+    ));
+  }
+
+  Future<void> updateStreamPath(String path) async {
+    final repo = ref.read(settingsRepositoryProvider);
+    await repo.setStreamPath(path);
+    state = AsyncData(state.value!.copyWith(streamPath: path));
+  }
+
+  Future<void> updateCapturePath(String path) async {
+    final repo = ref.read(settingsRepositoryProvider);
+    await repo.setCapturePath(path);
+    state = AsyncData(state.value!.copyWith(capturePath: path));
+  }
+
   Future<void> updateHttpPort(int port) async {
     final repo = ref.read(settingsRepositoryProvider);
     await repo.setHttpPort(port);

@@ -86,21 +86,29 @@ class EmotionNotifier extends Notifier<EmotionState> {
     'Neutral': 0.0,
     'Sad': 0.0,
   };
+  bool _isFirstResult = true;
 
   @override
   EmotionState build() => const EmotionState();
 
   void addResult(EmotionResult result, int smoothingWindow) {
     // ── 1. EMA smoothing ──────────────────────────────────────────────────
-    final alpha = 2.0 / (smoothingWindow + 1);
-    for (final label in _emaProbs.keys) {
-      final prob = result.probabilities[label] ?? 0.0;
-      _emaProbs[label] = alpha * prob + (1 - alpha) * _emaProbs[label]!;
+    if (_isFirstResult) {
+      for (final label in _emaProbs.keys) {
+        _emaProbs[label] = result.probabilities[label] ?? 0.0;
+      }
+      _isFirstResult = false;
+    } else {
+      final alpha = 2.0 / (smoothingWindow + 1);
+      for (final label in _emaProbs.keys) {
+        final prob = result.probabilities[label] ?? 0.0;
+        _emaProbs[label] = alpha * prob + (1 - alpha) * _emaProbs[label]!;
+      }
     }
 
     // ── 2. Determine highest smoothed emotion ─────────────────────────────
-    String smoothedLabel = 'Unknown';
-    double smoothedConf = 0.0;
+    String smoothedLabel = result.label;
+    double smoothedConf = _emaProbs[result.label] ?? 0.0;
     _emaProbs.forEach((label, prob) {
       if (prob > smoothedConf) {
         smoothedConf = prob;
@@ -127,6 +135,7 @@ class EmotionNotifier extends Notifier<EmotionState> {
 
   void reset() {
     _emaProbs = {'Happy': 0.0, 'Neutral': 0.0, 'Sad': 0.0};
+    _isFirstResult = true;
     state = const EmotionState();
   }
 }

@@ -1,4 +1,5 @@
 # Capstone Gitignore
+.tmp/
 
 # Raw archive files
 *.zip

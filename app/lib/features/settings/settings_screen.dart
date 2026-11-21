@@ -19,6 +19,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late TextEditingController _ipController;
   late TextEditingController _httpPortController;
   late TextEditingController _streamPortController;
+  late TextEditingController _streamPathController;
+  late TextEditingController _capturePathController;
 
   bool _isTesting = false;
   bool _isScanning = false;
@@ -34,6 +36,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _ipController = TextEditingController();
     _httpPortController = TextEditingController(text: '80');
     _streamPortController = TextEditingController(text: '81');
+    _streamPathController = TextEditingController(text: AppConstants.defaultEsp32StreamPath);
+    _capturePathController = TextEditingController(text: AppConstants.defaultEsp32CapturePath);
   }
 
   @override
@@ -41,6 +45,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _ipController.dispose();
     _httpPortController.dispose();
     _streamPortController.dispose();
+    _streamPathController.dispose();
+    _capturePathController.dispose();
     super.dispose();
   }
 
@@ -54,6 +60,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (_streamPortController.text == '81' && settings.streamPort != 81) {
       _streamPortController.text = settings.streamPort.toString();
     }
+    if (_streamPathController.text == AppConstants.defaultEsp32StreamPath &&
+        settings.streamPath != AppConstants.defaultEsp32StreamPath) {
+      _streamPathController.text = settings.streamPath;
+    }
+    if (_capturePathController.text == AppConstants.defaultEsp32CapturePath &&
+        settings.capturePath != AppConstants.defaultEsp32CapturePath) {
+      _capturePathController.text = settings.capturePath;
+    }
+  }
+
+  void _onIpChanged(String value) {
+    // Auto-parser: if user pastes full URL like http://192.168.1.50:8080/video
+    var text = value.trim();
+    if (text.startsWith('http://') || text.startsWith('https://')) {
+      final parsed = Uri.tryParse(text);
+      if (parsed != null && parsed.host.isNotEmpty) {
+        _ipController.text = parsed.host;
+        if (parsed.hasPort) {
+          _httpPortController.text = parsed.port.toString();
+          _streamPortController.text = parsed.port.toString();
+        }
+        if (parsed.path.isNotEmpty && parsed.path != '/') {
+          _streamPathController.text = parsed.path;
+        }
+        if (parsed.path.contains('video') || parsed.port == 8080) {
+          ref.read(settingsProvider.notifier).updateCameraSourceType(CameraSourceType.ipWebcam);
+        } else if (parsed.path.contains('stream') || parsed.port == 81 || parsed.port == 80) {
+          ref.read(settingsProvider.notifier).updateCameraSourceType(CameraSourceType.esp32Cam);
+        }
+      }
+    } else if (text.contains(':')) {
+      final parts = text.split(':');
+      if (parts.length == 2 && int.tryParse(parts[1]) != null) {
+        _ipController.text = parts[0];
+        _httpPortController.text = parts[1];
+        _streamPortController.text = parts[1];
+        if (int.tryParse(parts[1]) == 8080) {
+          ref.read(settingsProvider.notifier).updateCameraSourceType(CameraSourceType.ipWebcam);
+        }
+      }
+    }
   }
 
   Future<void> _saveConnectionSettings() async {
@@ -62,26 +109,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await notifier.updateCameraIp(_ipController.text.trim());
     await notifier.updateHttpPort(int.parse(_httpPortController.text.trim()));
     await notifier.updateStreamPort(int.parse(_streamPortController.text.trim()));
+    await notifier.updateStreamPath(_streamPathController.text.trim());
+    await notifier.updateCapturePath(_capturePathController.text.trim());
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings saved')),
+        const SnackBar(content: Text('Settings saved successfully')),
       );
     }
   }
 
-  Future<void> _testConnection() async {
+  Future<void> _testConnection(AppSettings settings) async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _isTesting = true;
       _testResult = null;
     });
     final ip = _ipController.text.trim();
-    final port = int.tryParse(_httpPortController.text.trim()) ?? 80;
+    final port = int.tryParse(_httpPortController.text.trim()) ??
+        (settings.isIpWebcam ? 8080 : 80);
     try {
-      final status = await _controlSvc.testConnection(ip, port: port);
+      final msg = await _controlSvc.testCameraConnection(
+        ip,
+        port: port,
+        type: settings.cameraSourceType,
+      );
       setState(() {
         _testSuccess = true;
-        _testResult = 'Connected! Framesize: ${status.framesize}, Quality: ${status.quality}';
+        _testResult = msg;
       });
     } catch (e) {
       setState(() {
@@ -123,16 +177,134 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _SectionHeader('Camera Connection'),
+                _SectionHeader('Camera Source'),
+                SegmentedButton<CameraSourceType>(
+                  segments: const [
+                    ButtonSegment<CameraSourceType>(
+                      value: CameraSourceType.esp32Cam,
+                      label: Text('ESP32-CAM'),
+                      icon: Icon(Icons.memory_rounded),
+                    ),
+                    ButtonSegment<CameraSourceType>(
+                      value: CameraSourceType.ipWebcam,
+                      label: Text('Phone IP Cam'),
+                      icon: Icon(Icons.phone_android_rounded),
+                    ),
+                    ButtonSegment<CameraSourceType>(
+                      value: CameraSourceType.custom,
+                      label: Text('Custom'),
+                      icon: Icon(Icons.tune_rounded),
+                    ),
+                  ],
+                  selected: {settings.cameraSourceType},
+                  onSelectionChanged: (newSelection) async {
+                    final selectedType = newSelection.first;
+                    final notifier = ref.read(settingsProvider.notifier);
+                    await notifier.updateCameraSourceType(selectedType);
+
+                    if (selectedType == CameraSourceType.ipWebcam) {
+                      _httpPortController.text = '8080';
+                      _streamPortController.text = '8080';
+                      _streamPathController.text = AppConstants.defaultIpWebcamStreamPath;
+                      _capturePathController.text = AppConstants.defaultIpWebcamCapturePath;
+                      await notifier.updateHttpPort(8080);
+                      await notifier.updateStreamPort(8080);
+                      await notifier.updateStreamPath(AppConstants.defaultIpWebcamStreamPath);
+                      await notifier.updateCapturePath(AppConstants.defaultIpWebcamCapturePath);
+                    } else if (selectedType == CameraSourceType.esp32Cam) {
+                      _httpPortController.text = '80';
+                      _streamPortController.text = '81';
+                      _streamPathController.text = AppConstants.defaultEsp32StreamPath;
+                      _capturePathController.text = AppConstants.defaultEsp32CapturePath;
+                      await notifier.updateHttpPort(80);
+                      await notifier.updateStreamPort(81);
+                      await notifier.updateStreamPath(AppConstants.defaultEsp32StreamPath);
+                      await notifier.updateCapturePath(AppConstants.defaultEsp32CapturePath);
+                    }
+                  },
+                ),
+                if (settings.isIpWebcam) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Row(
+                          children: [
+                            Icon(Icons.phone_android_rounded, color: AppColors.primary, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'How to use another Phone as Camera:',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          '1. Install free "IP Webcam" app (by Pavel Khlebovich) on any phone from Play Store.\n'
+                          '2. Connect both phones to the same Wi-Fi network or Mobile Hotspot.\n'
+                          '3. Open IP Webcam on that phone, scroll to bottom and tap "Start server".\n'
+                          '4. Enter the IP shown on that phone screen below (e.g. 192.168.1.50).',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                            height: 1.45,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (settings.isEsp32) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border.withOpacity(0.4)),
+                    ),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.wifi_rounded, color: AppColors.textSecondary, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Ensure your ESP32-CAM module and this phone are on the same Wi-Fi network.',
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                _SectionHeader('Connection Details'),
                 // IP field
                 TextFormField(
                   controller: _ipController,
-                  decoration: const InputDecoration(
-                    labelText: 'ESP32-CAM IP Address',
-                    hintText: '192.168.1.100',
-                    prefixIcon: Icon(Icons.router_rounded),
+                  decoration: InputDecoration(
+                    labelText: settings.isIpWebcam
+                        ? 'Phone IP Webcam Address'
+                        : (settings.isEsp32 ? 'ESP32-CAM IP Address' : 'Camera IP Address'),
+                    hintText: settings.isIpWebcam ? '192.168.1.50' : '192.168.1.100',
+                    prefixIcon: Icon(
+                      settings.isIpWebcam ? Icons.phone_android_rounded : Icons.router_rounded,
+                    ),
+                    helperText: 'Enter IP or paste full URL (e.g. http://192.168.1.50:8080)',
                   ),
-                  keyboardType: TextInputType.number,
+                  keyboardType: TextInputType.text,
+                  onChanged: _onIpChanged,
                   validator: Validators.validateIPv4,
                 ),
                 const SizedBox(height: 12),
@@ -141,22 +313,52 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: _httpPortController,
-                        decoration: const InputDecoration(labelText: 'HTTP Port'),
+                        decoration: InputDecoration(
+                          labelText: settings.isIpWebcam ? 'Webcam Port' : 'HTTP Port',
+                        ),
                         keyboardType: TextInputType.number,
                         validator: Validators.validatePort,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _streamPortController,
-                        decoration: const InputDecoration(labelText: 'Stream Port'),
-                        keyboardType: TextInputType.number,
-                        validator: Validators.validatePort,
+                    if (!settings.isIpWebcam) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _streamPortController,
+                          decoration: const InputDecoration(labelText: 'Stream Port'),
+                          keyboardType: TextInputType.number,
+                          validator: Validators.validatePort,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
+                if (settings.cameraSourceType == CameraSourceType.custom) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _streamPathController,
+                          decoration: const InputDecoration(
+                            labelText: 'Stream Path',
+                            hintText: '/stream or /video',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _capturePathController,
+                          decoration: const InputDecoration(
+                            labelText: 'Capture Path',
+                            hintText: '/capture or /shot.jpg',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 12),
                 ElevatedButton.icon(
                   onPressed: _saveConnectionSettings,
@@ -165,7 +367,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
-                  onPressed: _isTesting ? null : _testConnection,
+                  onPressed: _isTesting ? null : () => _testConnection(settings),
                   icon: _isTesting
                       ? const SizedBox(
                           width: 16,
@@ -195,34 +397,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: _isScanning ? null : _scanNetwork,
-                  icon: _isScanning
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.search_rounded),
-                  label: Text(_isScanning
-                      ? 'Scanning ${AppConstants.defaultSubnet}.x…'
-                      : 'Find Camera on Network'),
-                ),
-                if (_foundDevices.isNotEmpty) ...[
+                if (settings.isEsp32) ...[
                   const SizedBox(height: 8),
-                  ...(_foundDevices.map((ip) => ListTile(
-                        title: Text(ip),
-                        subtitle: const Text('ESP32-CAM found'),
-                        trailing: TextButton(
-                          onPressed: () => setState(() => _ipController.text = ip),
-                          child: const Text('Use'),
-                        ),
-                      ))),
+                  OutlinedButton.icon(
+                    onPressed: _isScanning ? null : _scanNetwork,
+                    icon: _isScanning
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.search_rounded),
+                    label: Text(_isScanning
+                        ? 'Scanning ${AppConstants.defaultSubnet}.x…'
+                        : 'Find Camera on Network'),
+                  ),
+                  if (_foundDevices.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ...(_foundDevices.map((ip) => ListTile(
+                          title: Text(ip),
+                          subtitle: const Text('ESP32-CAM found'),
+                          trailing: TextButton(
+                            onPressed: () => setState(() => _ipController.text = ip),
+                            child: const Text('Use'),
+                          ),
+                        ))),
+                  ],
                 ],
                 const SizedBox(height: 16),
                 _SectionHeader('Stream Settings'),
-                // Stream mode
                 _DropdownTile<StreamMode>(
                   label: 'Stream Mode',
                   value: settings.streamMode,
@@ -230,42 +433,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   itemLabel: (m) => m.displayName,
                   onChanged: (m) => ref.read(settingsProvider.notifier).updateStreamMode(m),
                 ),
-                const SizedBox(height: 12),
-                // Resolution
-                _DropdownTile<CameraResolution>(
-                  label: 'Resolution',
-                  value: CameraResolution.values.firstWhere(
-                    (r) => r.value == settings.resolution,
-                    orElse: () => CameraResolution.vga,
+                if (settings.isEsp32) ...[
+                  const SizedBox(height: 12),
+                  _DropdownTile<CameraResolution>(
+                    label: 'Resolution (ESP32-CAM)',
+                    value: CameraResolution.values.firstWhere(
+                      (r) => r.value == settings.resolution,
+                      orElse: () => CameraResolution.vga,
+                    ),
+                    items: CameraResolution.values,
+                    itemLabel: (r) => r.displayName,
+                    onChanged: (r) {
+                      ref.read(settingsProvider.notifier).updateResolution(r.value);
+                    },
                   ),
-                  items: CameraResolution.values,
-                  itemLabel: (r) => r.displayName,
-                  onChanged: (r) {
-                    ref.read(settingsProvider.notifier).updateResolution(r.value);
-                  },
-                ),
-                const SizedBox(height: 16),
-                _SectionHeader('Camera Quality'),
-                _SliderTile(
-                  label: 'JPEG Quality',
-                  value: settings.jpegQuality.toDouble(),
-                  min: 4,
-                  max: 63,
-                  divisions: 59,
-                  format: (v) => v.round().toString(),
-                  onChanged: (v) =>
-                      ref.read(settingsProvider.notifier).updateJpegQuality(v.round()),
-                ),
-                _SliderTile(
-                  label: 'LED Flash Intensity',
-                  value: settings.ledIntensity.toDouble(),
-                  min: 0,
-                  max: 255,
-                  divisions: 255,
-                  format: (v) => v.round().toString(),
-                  onChanged: (v) =>
-                      ref.read(settingsProvider.notifier).updateLedIntensity(v.round()),
-                ),
+                  const SizedBox(height: 16),
+                  _SectionHeader('Camera Quality (ESP32-CAM)'),
+                  _SliderTile(
+                    label: 'JPEG Quality',
+                    value: settings.jpegQuality.toDouble(),
+                    min: 4,
+                    max: 63,
+                    divisions: 59,
+                    format: (v) => v.round().toString(),
+                    onChanged: (v) =>
+                        ref.read(settingsProvider.notifier).updateJpegQuality(v.round()),
+                  ),
+                  _SliderTile(
+                    label: 'LED Flash Intensity',
+                    value: settings.ledIntensity.toDouble(),
+                    min: 0,
+                    max: 255,
+                    divisions: 255,
+                    format: (v) => v.round().toString(),
+                    onChanged: (v) =>
+                        ref.read(settingsProvider.notifier).updateLedIntensity(v.round()),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 _SectionHeader('Inference Settings'),
                 _SliderTile(
@@ -429,4 +633,3 @@ class _DropdownTile<T> extends StatelessWidget {
     );
   }
 }
-

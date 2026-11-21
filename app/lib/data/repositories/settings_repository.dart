@@ -21,6 +21,39 @@ class SettingsRepository {
     await prefs.setString(AppConstants.keyCameraIp, ip);
   }
 
+  // --- Camera Source Type (ESP32-CAM vs Mobile IP Webcam) ---
+  Future<CameraSourceType> getCameraSourceType() async {
+    final prefs = await _preferences;
+    final idx = prefs.getInt(AppConstants.keyCameraSourceType) ?? 0;
+    return CameraSourceType.values[idx.clamp(0, CameraSourceType.values.length - 1)];
+  }
+
+  Future<void> setCameraSourceType(CameraSourceType type) async {
+    final prefs = await _preferences;
+    await prefs.setInt(AppConstants.keyCameraSourceType, type.index);
+  }
+
+  // --- Stream & Capture Paths ---
+  Future<String> getStreamPath() async {
+    final prefs = await _preferences;
+    return prefs.getString(AppConstants.keyStreamPath) ?? '/stream';
+  }
+
+  Future<void> setStreamPath(String path) async {
+    final prefs = await _preferences;
+    await prefs.setString(AppConstants.keyStreamPath, path);
+  }
+
+  Future<String> getCapturePath() async {
+    final prefs = await _preferences;
+    return prefs.getString(AppConstants.keyCapturePath) ?? '/capture';
+  }
+
+  Future<void> setCapturePath(String path) async {
+    final prefs = await _preferences;
+    await prefs.setString(AppConstants.keyCapturePath, path);
+  }
+
   // --- HTTP Port ---
   Future<int> getHttpPort() async {
     final prefs = await _preferences;
@@ -138,10 +171,14 @@ class SettingsRepository {
 
   /// Load all settings at once.
   Future<AppSettings> loadAll() async {
+    final type = await getCameraSourceType();
     return AppSettings(
       cameraIp: await getCameraIp(),
+      cameraSourceType: type,
       httpPort: await getHttpPort(),
       streamPort: await getStreamPort(),
+      streamPath: await getStreamPath(),
+      capturePath: await getCapturePath(),
       streamMode: await getStreamMode(),
       resolution: await getResolution(),
       jpegQuality: await getJpegQuality(),
@@ -157,8 +194,11 @@ class SettingsRepository {
 /// Immutable snapshot of all app settings.
 class AppSettings {
   final String? cameraIp;
+  final CameraSourceType cameraSourceType;
   final int httpPort;
   final int streamPort;
+  final String streamPath;
+  final String capturePath;
   final StreamMode streamMode;
   final int resolution;
   final int jpegQuality;
@@ -170,8 +210,11 @@ class AppSettings {
 
   const AppSettings({
     this.cameraIp,
+    this.cameraSourceType = CameraSourceType.esp32Cam,
     this.httpPort = AppConstants.defaultHttpPort,
     this.streamPort = AppConstants.defaultStreamPort,
+    this.streamPath = '/stream',
+    this.capturePath = '/capture',
     this.streamMode = StreamMode.mjpeg,
     this.resolution = 8,
     this.jpegQuality = 10,
@@ -183,11 +226,16 @@ class AppSettings {
   });
 
   bool get hasCameraIp => cameraIp != null && cameraIp!.isNotEmpty;
+  bool get isEsp32 => cameraSourceType == CameraSourceType.esp32Cam;
+  bool get isIpWebcam => cameraSourceType == CameraSourceType.ipWebcam;
 
   AppSettings copyWith({
     String? cameraIp,
+    CameraSourceType? cameraSourceType,
     int? httpPort,
     int? streamPort,
+    String? streamPath,
+    String? capturePath,
     StreamMode? streamMode,
     int? resolution,
     int? jpegQuality,
@@ -199,8 +247,11 @@ class AppSettings {
   }) {
     return AppSettings(
       cameraIp: cameraIp ?? this.cameraIp,
+      cameraSourceType: cameraSourceType ?? this.cameraSourceType,
       httpPort: httpPort ?? this.httpPort,
       streamPort: streamPort ?? this.streamPort,
+      streamPath: streamPath ?? this.streamPath,
+      capturePath: capturePath ?? this.capturePath,
       streamMode: streamMode ?? this.streamMode,
       resolution: resolution ?? this.resolution,
       jpegQuality: jpegQuality ?? this.jpegQuality,

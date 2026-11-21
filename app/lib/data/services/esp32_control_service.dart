@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../core/constants/app_constants.dart';
 import '../models/camera_settings.dart';
 
-/// Service for controlling ESP32-CAM via HTTP.
+/// Service for controlling ESP32-CAM and testing IP cameras via HTTP.
 ///
 /// Endpoints:
 /// - GET /status (port 80) → JSON with camera settings
@@ -21,8 +22,48 @@ class Esp32ControlService {
     return CameraSettings.fromJson(json);
   }
 
-  /// Tests the connection to the ESP32-CAM.
-  /// Returns the camera settings if successful, throws on failure.
+  /// Tests the connection to the camera (supports both ESP32-CAM and Phone IP Webcam).
+  Future<String> testCameraConnection(
+    String ip, {
+    int port = 80,
+    CameraSourceType type = CameraSourceType.esp32Cam,
+  }) async {
+    if (type == CameraSourceType.esp32Cam) {
+      try {
+        final settings = await getStatus(ip, port: port);
+        return 'ESP32-CAM connected! (Settings OK)';
+      } catch (e) {
+        // Fallback: check if /capture responds
+        try {
+          final resp = await http
+              .get(Uri.parse('http://$ip:$port/capture'))
+              .timeout(const Duration(seconds: 4));
+          if (resp.statusCode == 200) {
+            return 'ESP32-CAM connected! (Capture endpoint responding)';
+          }
+        } catch (_) {}
+        throw Exception('Could not connect to ESP32-CAM at http://$ip:$port');
+      }
+    } else {
+      // Probing Phone IP Webcam endpoints: /shot.jpg, /video, /
+      for (final path in ['/shot.jpg', '/video', '/']) {
+        try {
+          final resp = await http
+              .get(Uri.parse('http://$ip:$port$path'))
+              .timeout(const Duration(seconds: 4));
+          if (resp.statusCode == 200) {
+            return 'Mobile IP Webcam connected! ($path active)';
+          }
+        } catch (_) {}
+      }
+      throw Exception(
+        'Could not connect to Phone IP Webcam at http://$ip:$port. '
+        'Ensure the IP Webcam app is running on the other phone and Wi-Fi is connected.',
+      );
+    }
+  }
+
+  /// Tests the connection to the ESP32-CAM (backward-compatible).
   Future<CameraSettings> testConnection(String ip, {int port = 80}) async {
     return await getStatus(ip, port: port);
   }
